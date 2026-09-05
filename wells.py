@@ -108,23 +108,11 @@ PE_THREE_TIER: List[Tuple[float, float, str, str]] = [
 
 # ---------------------------------------------------------------------------
 # Modified Wells for PE (without "alternative diagnosis" criterion)
+# Identical to PE_CRITERIA — the original Wells PE score does not include
+# the alternative diagnosis criterion (which is DVT-only).
+# Kept as an alias for API clarity and backward compatibility.
 # ---------------------------------------------------------------------------
-MODIFIED_PE_CRITERIA: List[Tuple[str, float, str]] = [
-    ("clinical_dvt_signs", 3.0,
-     "Clinical signs and symptoms of DVT"),
-    ("pe_most_likely", 3.0,
-     "PE is #1 diagnosis OR equally likely"),
-    ("heart_rate_100", 1.5,
-     "Heart rate >100 bpm"),
-    ("immobilization_surgery", 1.5,
-     "Immobilization at least 3 days, or surgery within the past 4 weeks"),
-    ("previous_dvt_pe", 1.5,
-     "Previous DVT or PE"),
-    ("hemoptysis", 1.0,
-     "Hemoptysis"),
-    ("malignancy", 1.0,
-     "Malignancy (treatment within 6 months, or palliative)"),
-]
+MODIFIED_PE_CRITERIA: List[Tuple[str, float, str]] = PE_CRITERIA
 
 
 # ---------------------------------------------------------------------------

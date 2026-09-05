@@ -12,6 +12,9 @@ Usage:
     python cli.py dvt --json '{"active_cancer": true, "previous_dvt": true}'
     python cli.py pe --json '{"clinical_dvt_signs": true, "heart_rate_100": true}'
     python cli.py criteria     # List all criteria for all scores
+    python cli.py audit --task-id <id>  # Run enterprise audit via agent system
+    python cli.py chat <query>          # Query the LLM reasoning adapter
+    python cli.py verify-audit          # Verify HMAC audit trail integrity
 """
 
 import argparse
@@ -102,7 +105,11 @@ def _print_result(result, score_type):
 def cmd_dvt(args):
     """Run DVT scoring."""
     if args.json:
-        criteria = json.loads(args.json)
+        try:
+            criteria = json.loads(args.json)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
+            return 1
     else:
         criteria = _prompt_criteria(DVT_CRITERIA, "DVT (Deep Vein Thrombosis)")
 
@@ -114,7 +121,11 @@ def cmd_dvt(args):
 def cmd_pe(args):
     """Run PE scoring."""
     if args.json:
-        criteria = json.loads(args.json)
+        try:
+            criteria = json.loads(args.json)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
+            return 1
     else:
         criteria = _prompt_criteria(PE_CRITERIA, "PE (Pulmonary Embolism)")
 
@@ -126,7 +137,11 @@ def cmd_pe(args):
 def cmd_geneva(args):
     """Run Revised Geneva scoring."""
     if args.json:
-        criteria = json.loads(args.json)
+        try:
+            criteria = json.loads(args.json)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
+            return 1
     else:
         criteria = _prompt_criteria(GENEVA_CRITERIA, "Revised Geneva (PE)")
 
@@ -159,6 +174,65 @@ def cmd_criteria(args):
     return 0
 
 
+def cmd_audit(args):
+    """Run enterprise audit via agent supervisor system."""
+    try:
+        from agents.supervisor import SystemSupervisor
+        from agents.models import SystemTaskPayload
+    except ImportError as e:
+        print(f"Error: Agent system not available: {e}", file=sys.stderr)
+        return 1
+
+    supervisor = SystemSupervisor(model_provider="mock")
+    payload = SystemTaskPayload(
+        task_id=args.task_id,
+        target_identifier=getattr(args, "target_id", "CLI-DEFAULT"),
+        primary_metric=getattr(args, "primary_metric", 10.0),
+        secondary_metric=getattr(args, "secondary_metric", 2.0),
+        status_descriptor=getattr(args, "status", "NOMINAL"),
+        is_critical_flag=getattr(args, "critical", False),
+    )
+    dossier = supervisor.process_task(payload)
+    print(f"\nAudit complete: {dossier.dossier_id}")
+    print(f"Overall urgency: {dossier.overall_urgency.value}")
+    print(f"Integrity: {dossier.integrity_status.value}")
+    print(f"Audit hash: {dossier.audit_hash}")
+    return 0
+
+
+def cmd_chat(args):
+    """Query the LLM reasoning adapter."""
+    try:
+        from agents.supervisor import SystemSupervisor
+    except ImportError as e:
+        print(f"Error: Agent system not available: {e}", file=sys.stderr)
+        return 1
+
+    supervisor = SystemSupervisor(model_provider="mock")
+    query = " ".join(args.query) if isinstance(args.query, list) else str(args.query)
+    response = supervisor.query_supervisory_chat(query)
+    print(f"\n{response}")
+    return 0
+
+
+def cmd_verify_audit(args):
+    """Verify HMAC audit trail integrity."""
+    try:
+        from agents.base import AuditLogger
+    except ImportError as e:
+        print(f"Error: Agent system not available: {e}", file=sys.stderr)
+        return 1
+
+    valid = AuditLogger.verify_integrity()
+    trail = AuditLogger.get_trail()
+    if valid:
+        print(f"Audit trail integrity VERIFIED ({len(trail)} blocks)")
+        return 0
+    else:
+        print("Audit trail integrity VIOLATION detected!", file=sys.stderr)
+        return 1
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="wells",
@@ -184,6 +258,28 @@ def main(argv=None):
     # Criteria listing
     sub.add_parser("criteria", help="List all criteria for all scoring systems")
 
+    # Enterprise audit via agent system
+    p_audit = sub.add_parser("audit", help="Run enterprise audit via agent supervisor system")
+    p_audit.add_argument("--task-id", type=str, default="CLI-AUDIT-01",
+                         help="Task identifier for the audit")
+    p_audit.add_argument("--target-id", type=str, default="CLI-DEFAULT",
+                         help="Target identifier for the audit")
+    p_audit.add_argument("--primary-metric", type=float, default=10.0,
+                         help="Primary metric value")
+    p_audit.add_argument("--secondary-metric", type=float, default=2.0,
+                         help="Secondary metric value")
+    p_audit.add_argument("--status", type=str, default="NOMINAL",
+                         help="Status descriptor")
+    p_audit.add_argument("--critical", action="store_true",
+                         help="Set critical flag")
+
+    # Chat / LLM reasoning adapter
+    p_chat = sub.add_parser("chat", help="Query the LLM reasoning adapter")
+    p_chat.add_argument("query", nargs="+", help="Query text")
+
+    # Audit trail verification
+    sub.add_parser("verify-audit", help="Verify HMAC audit trail integrity")
+
     args = parser.parse_args(argv)
 
     if args.command == "dvt":
@@ -194,6 +290,12 @@ def main(argv=None):
         return cmd_geneva(args)
     elif args.command == "criteria":
         return cmd_criteria(args)
+    elif args.command == "audit":
+        return cmd_audit(args)
+    elif args.command == "chat":
+        return cmd_chat(args)
+    elif args.command == "verify-audit":
+        return cmd_verify_audit(args)
     else:
         parser.print_help()
         return 1

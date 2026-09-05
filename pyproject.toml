@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wells-score-calculator"
+version = "1.0.0"
+description = "Wells Score Calculator for DVT and PE — Clinical Decision Support Tool"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Dr. Abu Suraih Sakhri"}
+]
+keywords = ["wells-score", "dvt", "pe", "clinical-decision-support", "medical"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+[project.optional-dependencies]
+web = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "pydantic>=2.0"]
+test = ["pytest>=7.0"]
+
+[tool.setuptools]
+py-modules = ["wells", "cli", "enrichment", "simulator"]
+
+[tool.setuptools.packages.find]
+include = ["agents*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "test_wells.py"]
+python_files = ["test_*.py"]
