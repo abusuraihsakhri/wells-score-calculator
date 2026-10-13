@@ -2,111 +2,114 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Wells Score Calculator API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "description": "Clinical score endpoints alongside separate experimental audit demonstration endpoints. See /openapi.json on a running FastAPI server for the canonical live schema.",
+    "version": "3.0.0-ENTERPRISE"
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Service health",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Health report"
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "Demonstration counters",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Demo metrics object"
+          }
+        }
+      }
+    },
+    "/api/score/criteria": {
+      "get": {
+        "summary": "List Wells DVT, Wells PE, and Revised Geneva criteria",
+        "responses": {
+          "200": {
+            "description": "Criterion definitions"
+          }
+        }
+      }
+    },
+    "/api/score/{score_type}": {
+      "post": {
+        "summary": "Evaluate a clinical score without storing the input",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "score_type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dvt",
+                "pe",
+                "geneva"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "boolean"
+                },
+                "example": {
+                  "active_cancer": true,
+                  "previous_dvt": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scoring result with criteria and tier interpretations"
+          },
+          "404": {
+            "description": "Unknown scoring rule"
+          },
+          "422": {
+            "description": "Invalid criterion or mutually exclusive clinical inputs"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "task_id": {
-                    "type": "string"
-                  },
-                  "target_identifier": {
-                    "type": "string"
-                  },
-                  "primary_metric": {
-                    "type": "number"
-                  },
-                  "secondary_metric": {
-                    "type": "number"
-                  },
-                  "status_descriptor": {
-                    "type": "string"
-                  },
-                  "is_critical_flag": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "task_id",
-                  "target_identifier",
-                  "primary_metric"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Legacy generic audit demonstration (not a medical triage endpoint)",
         "responses": {
           "200": {
-            "description": "Consensus dossier with HMAC signature"
+            "description": "Demonstration dossier"
           }
         }
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "query"
-                ]
-              }
-            }
-          }
-        },
+        "summary": "Legacy mock chat demonstration (no clinical model inference)",
         "responses": {
           "200": {
-            "description": "Supervisory response"
+            "description": "Mock provider response"
           }
         }
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "Legacy audit log records and signature status",
         "responses": {
           "200": {
-            "description": "Cryptographic audit trail"
+            "description": "Demonstration audit trail"
           }
         }
       }
