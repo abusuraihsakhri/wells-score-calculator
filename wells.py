@@ -29,13 +29,13 @@ DVT_CRITERIA: List[Tuple[str, float, str]] = [
     ("paralysis_paresis", 1.0,
      "Paralysis, paresis, or recent cast immobilization of lower extremity"),
     ("recently_bedridden", 1.0,
-     "Recently bedridden >3 days, or major surgery within 12 weeks"),
+     "Bedridden for 3 or more days, or major surgery under anaesthesia within 12 weeks"),
     ("localized_tenderness", 1.0,
      "Localized tenderness along the deep venous system"),
     ("entire_leg_swollen", 1.0,
      "Entire leg swollen"),
     ("calf_swelling_3cm", 1.0,
-     "Calf swelling >3 cm compared to asymptomatic leg "
+     "Calf swelling >=3 cm compared to asymptomatic leg "
      "(measured 10 cm below tibial tuberosity)"),
     ("pitting_edema", 1.0,
      "Pitting edema confined to symptomatic leg"),
@@ -50,10 +50,10 @@ DVT_CRITERIA: List[Tuple[str, float, str]] = [
 # Wells DVT two-tier interpretation
 DVT_TWO_TIER: List[Tuple[float, float, str, str]] = [
     # (max_score_inclusive, prevalence, category, recommendation)
-    (0, 5, "Low probability",
-     "Consider D-dimer; if negative, DVT effectively excluded."),
-    (float("inf"), 53, "High probability",
-     "Proceed to compression ultrasonography."),
+    (1, None, "DVT unlikely",
+     "Use the D-dimer pathway for suspected DVT, in the appropriate clinical context."),
+    (float("inf"), None, "DVT likely",
+     "Obtain proximal leg vein ultrasonography according to the diagnostic pathway."),
 ]
 
 # Wells DVT three-tier interpretation
@@ -74,7 +74,7 @@ PE_CRITERIA: List[Tuple[str, float, str]] = [
     ("clinical_dvt_signs", 3.0,
      "Clinical signs and symptoms of DVT"),
     ("pe_most_likely", 3.0,
-     "PE is #1 diagnosis OR equally likely"),
+     "Alternative diagnosis is less likely than PE"),
     ("heart_rate_100", 1.5,
      "Heart rate >100 bpm"),
     ("immobilization_surgery", 1.5,
@@ -97,7 +97,7 @@ PE_TWO_TIER: List[Tuple[float, float, str, str]] = [
 
 # Wells PE three-tier interpretation
 PE_THREE_TIER: List[Tuple[float, float, str, str]] = [
-    (0, 3, "Low probability",
+    (1.5, 3, "Low probability",
      "Consider D-dimer; if negative, PE effectively excluded."),
     (6, 20, "Moderate probability",
      "D-dimer recommended; if elevated, proceed to CTPA."),
@@ -149,7 +149,7 @@ GENEVA_TWO_TIER: List[Tuple[float, float, str, str]] = [
 GENEVA_THREE_TIER: List[Tuple[float, float, str, str]] = [
     (3, 8, "Low probability",
      "Consider D-dimer; if negative, PE effectively excluded."),
-    (5, 22, "Moderate probability",
+    (10, 22, "Moderate probability",
      "D-dimer recommended; if elevated, proceed to CTPA."),
     (float("inf"), 65, "High probability",
      "Proceed directly to CTPA or V/Q scan."),
@@ -164,11 +164,26 @@ def _parse_bool(val) -> bool:
     """Parse a value as boolean. Accepts True/False, 1/0, 'yes'/'no', etc."""
     if isinstance(val, bool):
         return val
-    if isinstance(val, (int, float)):
-        return val != 0
+    if isinstance(val, (int, float)) and val in (0, 1):
+        return bool(val)
     if isinstance(val, str):
-        return val.strip().lower() in ("1", "true", "yes", "y", "present")
-    return False
+        value = val.strip().lower()
+        if value in ("1", "true", "yes", "y", "present"):
+            return True
+        if value in ("0", "false", "no", "n", "absent"):
+            return False
+    raise ValueError("Criteria must contain explicit boolean values (true/false, 1/0, yes/no)")
+
+
+def _validate_criteria(criteria: Dict[str, bool], definitions: List[Tuple[str, float, str]]) -> None:
+    """Reject malformed and unknown criteria rather than silently under-scoring."""
+    if not isinstance(criteria, dict):
+        raise ValueError("Criteria must be a JSON object / Python dictionary")
+    unknown = set(criteria).difference(key for key, _, _ in definitions)
+    if unknown:
+        raise ValueError("Unknown criteria: " + ", ".join(sorted(map(str, unknown))))
+    for value in criteria.values():
+        _parse_bool(value)
 
 
 def calculate_dvt(criteria: Dict[str, bool]) -> Dict:
@@ -186,6 +201,7 @@ def calculate_dvt(criteria: Dict[str, bool]) -> Dict:
         dict with score, criteria_met, interpretation (two-tier and three-tier),
         prevalence_estimates, and next_steps.
     """
+    _validate_criteria(criteria, DVT_CRITERIA)
     score = 0.0
     criteria_met = []
 
@@ -227,6 +243,7 @@ def calculate_pe(criteria: Dict[str, bool]) -> Dict:
         dict with score, criteria_met, interpretation (two-tier and three-tier),
         prevalence_estimates, and next_steps.
     """
+    _validate_criteria(criteria, PE_CRITERIA)
     score = 0.0
     criteria_met = []
 
@@ -255,35 +272,13 @@ def calculate_pe(criteria: Dict[str, bool]) -> Dict:
 
 
 def calculate_modified_pe(criteria: Dict[str, bool]) -> Dict:
+    """Backward-compatible alias using the same standard Wells PE criteria.
+
+    The historic public API omitted ddimer_guidance in this response.
     """
-    Calculate Modified Wells Score for PE (same criteria, no alternative
-    diagnosis criterion — which is already absent from PE criteria).
-
-    This is the most commonly used version in clinical practice.
-    Identical to calculate_pe for the standard PE criteria set.
-    """
-    score = 0.0
-    criteria_met = []
-
-    for key, points, description in MODIFIED_PE_CRITERIA:
-        present = _parse_bool(criteria.get(key, False))
-        if present:
-            score += points
-            criteria_met.append({
-                "key": key,
-                "points": points,
-                "description": description,
-            })
-
-    two_tier = _interpret(score, PE_TWO_TIER)
-    three_tier = _interpret(score, PE_THREE_TIER)
-
-    return {
-        "score": score,
-        "criteria_met": criteria_met,
-        "two_tier": two_tier,
-        "three_tier": three_tier,
-    }
+    result = calculate_pe(criteria)
+    result.pop("ddimer_guidance")
+    return result
 
 
 def calculate_geneva(criteria: Dict[str, bool]) -> Dict:
@@ -299,6 +294,11 @@ def calculate_geneva(criteria: Dict[str, bool]) -> Dict:
     Returns:
         dict with score, criteria_met, interpretation (two-tier and three-tier).
     """
+    _validate_criteria(criteria, GENEVA_CRITERIA)
+    if _parse_bool(criteria.get("heart_rate_75_94", False)) and _parse_bool(
+        criteria.get("heart_rate_95_plus", False)
+    ):
+        raise ValueError("Revised Geneva heart-rate categories are mutually exclusive")
     score = 0.0
     criteria_met = []
 
@@ -345,28 +345,26 @@ def _interpret(score: float, tiers: List[Tuple[float, float, str, str]]) -> Dict
 
 
 def _dimer_guidance_dvt(score: float) -> str:
-    """Provide D-dimer guidance based on Wells DVT score."""
-    if score <= 0:
-        return ("Low probability. A negative D-dimer (<500 ng/mL FEU) "
-                "effectively excludes DVT. No imaging needed if D-dimer negative.")
-    elif score <= 2:
-        return ("Moderate probability. D-dimer testing recommended. "
-                "If negative, DVT unlikely. If positive, proceed to "
-                "compression ultrasonography.")
-    else:
-        return ("High probability. D-dimer not recommended for ruling out. "
-                "Proceed directly to compression ultrasonography.")
+    """Summarize the NICE NG158 two-level DVT pathway (adult, suspected DVT)."""
+    if score <= 1:
+        return ("DVT unlikely. D-dimer testing is recommended in the appropriate "
+                "clinical pathway. Interpret the result using the assay-specific "
+                "threshold and clinical context; positive tests need ultrasound.")
+    return ("DVT likely. Arrange proximal leg vein ultrasonography; D-dimer "
+            "alone is not recommended for ruling out DVT. If the initial scan is "
+            "negative, follow the diagnostic pathway, including D-dimer and "
+            "repeat ultrasound when indicated.")
 
 
 def _dimer_guidance_pe(score: float) -> str:
-    """Provide D-dimer guidance based on Wells PE score."""
+    """Summarize the NICE NG158 two-level PE pathway (adult, suspected PE)."""
     if score <= 4:
-        return ("PE unlikely. A negative D-dimer (<500 ng/mL FEU) "
-                "effectively excludes PE. No imaging needed if D-dimer negative.")
-    else:
-        return ("PE likely. D-dimer not recommended for ruling out. "
-                "Proceed directly to CT pulmonary angiography (CTPA) or "
-                "V/Q scan.")
+        return ("PE unlikely. D-dimer testing is recommended within the "
+                "appropriate pathway; use an assay-appropriate threshold. "
+                "Positive results require further assessment and often imaging.")
+    return ("PE likely. D-dimer alone is not recommended for ruling out PE. "
+            "Arrange appropriate diagnostic imaging (CTPA or V/Q in selected "
+            "patients) following the clinical pathway.")
 
 
 # ---------------------------------------------------------------------------
