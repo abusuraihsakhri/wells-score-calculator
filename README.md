@@ -1,224 +1,82 @@
-# WELLS Score Calculator
+# Wells Score Calculator
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Standard:** Clinical Practice Guidelines
+Clinical prediction rules for suspected deep vein thrombosis (DVT) and pulmonary embolism (PE) in adults, available as an offline-capable static browser calculator and a Python library/CLI.
 
-<div align="center">
+## Features
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-71%20passed-brightgreen.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+- Wells DVT score with **two-tier** (DVT unlikely ≤1, DVT likely ≥2) and three-tier (≤0, 1–2, ≥3) interpretations.
+- Wells PE score with **two-tier** (PE unlikely ≤4, PE likely >4) and three-tier (<2, 2–6, >6) interpretations.
+- Revised Geneva score with three-tier (0–3, 4–10, ≥11) and two-tier (≤5, >5) categories.
+- Explicit criterion validation, mutually exclusive Geneva heart-rate ranges, and age/assay-aware diagnostic pathway caveats.
+- Browser interface in root \`index.html\`, with no server requirement or external scripts. Static scoring uses JavaScript; no Pyodide is needed.
+- Optional FastAPI scoring endpoints; legacy audit demonstration modules remain separate from the clinical algorithms.
 
-</div>
+**Clinical limitation:** These rules estimate pretest probability, not disease presence or individual absolute risk. Apply them only within validated diagnostic algorithms and clinical context, with appropriate D-dimer testing and/or imaging. Not a diagnostic device.
 
----
+## Browser use
 
-## 📖 What It Does
+Open \`index.html\` locally or publish the repository root through GitHub Pages. Select Wells DVT, Wells PE, or Revised Geneva; tick applicable clinical criteria. Scores and classifications update immediately. \`web/index.html\` redirects to the root interface.
 
-Wells Score Calculator for DVT and PE.
+The static app performs calculations entirely in-browser. It makes **no network requests**, uses no tracking, cookies, or browser storage, and does not accept patient identifiers. Do not enter PHI in any experimental APIs or legacy audit demonstration tools.
 
-Implements the Wells clinical prediction rules for estimating the probability
-of deep vein thrombosis (DVT) and pulmonary embolism (PE) in adult patients.
+## Python CLI
 
-References:
-  - Wells PS et al. "Value of assessment of pretest probability of deep-vein
-    thrombosis in clinical management." Lancet. 1997;350(9094):1795-8.
-  - Wells PS et al. "Excluding pulmonary embolism at the bedside without
-    diagnostic imaging." Ann Intern Med. 2001;135(2):98-107.
+Python 3.10 or later is supported. The clinical scoring module uses only the standard library.
 
-**This is a clinical decision support tool, NOT a diagnostic device.**
-Always correlate with clinical judgment and confirmatory testing.
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Analytical Functions
-
-- **`calculate_dvt(criteria)`**: Calculate Wells Score for DVT.
-  - Keys: `active_cancer`, `paralysis_paresis`, `recently_bedridden`,
-    `localized_tenderness`, `entire_leg_swollen`, `calf_swelling_3cm`,
-    `pitting_edema`, `collateral_veins`, `previous_dvt`,
-    `alternative_diagnosis`
-  - Returns: `score`, `criteria_met`, `two_tier`, `three_tier`, `ddimer_guidance`
-
-- **`calculate_pe(criteria)`**: Calculate Wells Score for PE.
-  - Keys: `clinical_dvt_signs`, `pe_most_likely`, `heart_rate_100`,
-    `immobilization_surgery`, `previous_dvt_pe`, `hemoptysis`, `malignancy`
-  - Returns: `score`, `criteria_met`, `two_tier`, `three_tier`, `ddimer_guidance`
-
-- **`calculate_modified_pe(criteria)`**: Calculate Modified Wells Score for PE.
-  Same as `calculate_pe` — the standard PE criteria do not include an
-  "alternative diagnosis" criterion.
-
-- **`calculate_geneva(criteria)`**: Calculate Revised Geneva Score for PE.
-  - Keys: `previous_dvt_pe`, `heart_rate_75_94`, `heart_rate_95_plus`,
-    `surgery_fracture_1mo`, `hemoptysis`, `active_cancer`,
-    `unilateral_leg_pain`, `pain_on_palpation`, `age_over_65`
-  - Returns: `score`, `criteria_met`, `two_tier`, `three_tier`
-
-- **`list_dvt_criteria()`**, **`list_pe_criteria()`**, **`list_geneva_criteria()`**:
-  Return all criteria with keys, points, and descriptions.
-
----
-
-## 📐 Scoring Interpretation
-
-### Wells DVT (range: -2 to 9)
-| Two-tier | Three-tier | Score | Prevalence |
-|:---------|:-----------|:------|:-----------|
-| Low | Low | <= 0 | ~5% |
-| High | Moderate | 1-2 | ~17% |
-| High | High | >= 3 | ~53% |
-
-### Wells PE (range: 0 to 12.5)
-| Two-tier | Three-tier | Score | Prevalence |
-|:---------|:-----------|:------|:-----------|
-| PE unlikely | Low | <= 0 | ~3% |
-| PE unlikely | Moderate | 0.5-6 | ~20% |
-| PE likely | High | >= 6.5 | ~65% |
-
-### Revised Geneva PE (range: 0 to 25)
-| Two-tier | Three-tier | Score | Prevalence |
-|:---------|:-----------|:------|:-----------|
-| PE unlikely | Low | 0-3 | ~8% |
-| PE unlikely | Moderate | 4-5 | ~22% |
-| PE likely | High | >= 6 | ~65% |
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### Installation
-```bash
-# Clone the repository
+\`\`\`bash
 git clone https://github.com/abusuraihsakhri/wells-score-calculator.git
 cd wells-score-calculator
 
-# Optional: Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-```
+python cli.py dvt --json '{"active_cancer":true,"previous_dvt":true}'
+python cli.py pe --json '{"clinical_dvt_signs":true,"heart_rate_100":true}'
+python cli.py geneva --json '{"heart_rate_95_plus":true,"age_over_65":true}'
+python cli.py dvt       # interactive
+python cli.py criteria  # supported keys and point weights
+\`\`\`
 
-No external dependencies required for core functionality.
+Library example:
 
-### 1. Guided Interactive Mode
-```bash
-python cli.py dvt      # Interactive DVT scoring
-python cli.py pe       # Interactive PE scoring
-python cli.py geneva   # Interactive Revised Geneva scoring
-```
+\`\`\`python
+from wells import calculate_dvt, calculate_pe, calculate_geneva
 
-### 2. Direct Parameterized Evaluation (JSON input)
-```bash
-python cli.py dvt --json '{"active_cancer": true, "previous_dvt": true}'
-python cli.py pe --json '{"clinical_dvt_signs": true, "heart_rate_100": true}'
-python cli.py geneva --json '{"age_over_65": true, "heart_rate_95_plus": true}'
-```
+print(calculate_dvt({"active_cancer": True, "previous_dvt": True}))
+\`\`\`
 
-### 3. List All Criteria
-```bash
-python cli.py criteria
-```
+Invalid keys, malformed input, and contradictory Geneva heart-rate inputs are rejected instead of being silently scored as absent.
 
-### 4. Enterprise Audit System (requires `pydantic`)
-```bash
-# Set the audit secret key
-export AUDIT_SECRET_KEY="your-secret-key"
+## Optional API and legacy modules
 
-# Run audit
-python cli.py audit --task-id "TASK-001"
+\`\`\`bash
+python -m pip install -e '.[web]'
+python -m uvicorn agents.api:app --host 127.0.0.1 --port 8000
+\`\`\`
 
-# Verify audit trail
-python cli.py verify-audit
+- \`GET /api/score/criteria\`: available clinical rule criteria.
+- \`POST /api/score/dvt\`, \`/api/score/pe\`, \`/api/score/geneva\`: JSON mapping of criterion keys to booleans. These scoring routes do not log or persist the payload.
+- \`GET /health\`: service status.
+- The older \`/api/audit\`, \`/api/chat\`, and audit-log endpoints are generic **demonstration** utilities, not validated clinical triage or medical inference. Set a strong \`AUDIT_SECRET_KEY\` before using audit functions. The mock chat provider does not perform reasoning.
 
-# Query LLM reasoning adapter
-python cli.py chat "Explain Wells criteria"
-```
+Container use: \`docker build -t wells-score-calculator .\`, followed by \`docker run -p 8000:8000 wells-score-calculator\`. For the generic audit service, set \`AUDIT_SECRET_KEY\` separately.
 
-### 5. Web API (requires `fastapi`, `uvicorn`)
-```bash
-pip install fastapi uvicorn pydantic
-python -m uvicorn agents.api:app --host 0.0.0.0 --port 8000
-```
+## Testing
 
----
+\`\`\`bash
+python -m pip install -e '.[web,test]'
+AUDIT_SECRET_KEY=local-test-only-key python -m pytest -q
+node --check web/calculator.js
+node web/calculator.test.cjs
+\`\`\`
 
-## 🛡️ Security Features
+CI generates an isolated test key and runs Python 3.10, 3.11, and 3.12 plus JavaScript scoring tests. The source tree includes an additional legacy enrichment suite, which is independent of Wells calculations and not a clinically validated model.
 
-* **Zero-PHI Outbound Interceptor:** AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation. Requires `AUDIT_SECRET_KEY` environment variable.
-* **Input Validation:** Robust boolean parsing and JSON error handling in CLI.
+## Clinical references
 
----
+- [NICE NG158 — Venous thromboembolic diseases: diagnosis, management and thrombophilia testing](https://www.nice.org.uk/guidance/ng158/chapter/Recommendations) (two-level Wells DVT/PE criteria and diagnostic pathways).
+- [2026 multi-society guideline for acute pulmonary embolism, JACC](https://www.jacc.org/doi/10.1016/j.jacc.2025.11.005) (three-level Wells PE and Revised Geneva classifications).
+- Wells PS et al. *Lancet*. 1997;350:1795–1798; Wells PS et al. *Ann Intern Med*. 2001;135:98–107.
 
-## 🧪 Testing & Verification
+Prevalence estimates present in the Python API reflect historical derivation/validation cohorts, not reliable personalized probabilities. Local testing and clinical verification are required before practice integration.
 
-### Core Tests (stdlib only)
-```bash
-python -m pytest test_wells.py -v
-```
+## License
 
-### Full Test Suite (requires `pydantic`)
-```bash
-# Set audit secret key first
-export AUDIT_SECRET_KEY="test-key-for-validation"
-
-python -m pytest -v
-```
-
-### Run with Docker
-```bash
-docker build -t wells-score-calculator .
-docker run -e AUDIT_SECRET_KEY=change-me -p 8000:8000 wells-score-calculator
-```
-
-Or using Docker Compose:
-```bash
-# Create .env file with your secret key
-echo "AUDIT_SECRET_KEY=change-me" > .env
-
-docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-wells-score-calculator/
-├── wells.py              # Core Wells score calculation engine
-├── cli.py                # Command-line interface
-├── enrichment.py         # Extended clinical enrichment modules
-├── simulator.py          # High-throughput simulation/testing
-├── test_wells.py         # Comprehensive unittest test suite (66 tests)
-├── tests/
-│   ├── test_enrichment.py
-│   └── test_wells_score_calculator.py
-├── agents/
-│   ├── __init__.py
-│   ├── api.py            # FastAPI REST API
-│   ├── base.py           # Security, PHI guard, HMAC audit
-│   ├── models.py         # Pydantic data models
-│   ├── supervisor.py     # Multi-agent supervisor orchestrator
-│   ├── workers.py        # Specialized worker agents
-│   ├── llm_factory.py    # LLM provider abstraction
-│   ├── metrics.py        # Prometheus metrics exporter
-│   ├── learning.py       # Bayesian calibration engine
-│   └── streamer.py       # WebSocket telemetry broadcaster
-├── web/
-│   └── index.html        # Operations console dashboard
-├── pyproject.toml        # Package configuration
-├── Dockerfile            # Container build
-├── docker-compose.yml    # Service orchestration
-├── benchmark_dataset.json
-├── sample.csv
-└── LICENSE
-```
-
----
-
-## ⚠️ Disclaimer
-
-This software is a clinical decision support tool intended for use by qualified healthcare professionals. It is **NOT** a diagnostic device. All results must be correlated with clinical judgment and confirmatory testing.
+MIT — see [LICENSE](LICENSE). Clinical criteria are attributed to their source publications.
