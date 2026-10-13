@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Local, browser-based Wells DVT, Wells PE, and Revised Geneva pretest probability scoring.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Wells Score Calculator | DVT, PE &amp; Revised Geneva</title>
+  <link rel="stylesheet" href="./web/style.css">
+  <script defer src="./web/calculator.js"></script>
+  <script defer src="./web/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-head">
+      <p class="eyebrow">CLINICAL PRETEST PROBABILITY</p>
+      <h1>Wells Score Calculator</h1>
+      <p class="subhead">Structured adult DVT and PE assessment using published clinical prediction rules. Calculations run entirely in this browser.</p>
+    </header>
+    <div class="safety" role="note">
+      <strong>Clinical decision support only.</strong> Not a diagnostic test. Scores do not establish or exclude venous thromboembolism on their own. For unstable patients, pregnancy, or nonstandard populations, follow the relevant clinical pathway.
+    </div>
+    <main class="layout">
+      <section class="panel" aria-labelledby="choose-heading">
+        <div class="panel-title"><h2 id="choose-heading">Choose assessment</h2><button type="button" id="clear" class="quiet">Clear answers</button></div>
+        <div class="tabs" role="group" aria-label="Select prediction rule">
+          <button type="button" class="tab active" data-score="dvt" aria-pressed="true">Wells · DVT</button>
+          <button type="button" class="tab" data-score="pe" aria-pressed="false">Wells · PE</button>
+          <button type="button" class="tab" data-score="geneva" aria-pressed="false">Revised Geneva · PE</button>
+        </div>
+        <p class="prompt">Select every criterion that applies. Unselected criteria are treated as absent.</p>
+        <fieldset class="criteria"><legend id="criteria-legend">Wells DVT criteria</legend><div id="criteria-list"></div></fieldset>
+      </section>
+      <aside class="panel result-panel" aria-labelledby="result-heading">
+        <h2 id="result-heading">Pretest probability assessment</h2>
+        <p class="meta">Total clinical prediction score</p>
+        <output id="score" class="score" aria-live="polite" aria-atomic="true">0</output>
+        <div class="assessment">
+          <p class="meta">Two-tier classification</p>
+          <p id="two-tier" class="classification">DVT unlikely</p>
+        </div>
+        <div class="assessment">
+          <p class="meta">Three-tier classification</p>
+          <p id="three-tier" class="classification secondary">Low probability</p>
+        </div>
+        <div class="guidance">
+          <h3>Suggested diagnostic pathway context</h3>
+          <p id="guidance">Enter clinical criteria to view pathway context.</p>
+        </div>
+        <p class="privacy">No names, uploads, cookies, tracking, saved clinical data, or server requests. Closing or refreshing the page clears the assessment.</p>
+      </aside>
+    </main>
+    <footer>
+      <h2>References and limitations</h2>
+      <p>Interpretation thresholds are aligned with <a href="https://www.nice.org.uk/guidance/ng158/chapter/Recommendations" target="_blank" rel="noopener noreferrer">NICE NG158</a> for the two-level Wells rules and the <a href="https://www.jacc.org/doi/10.1016/j.jacc.2025.11.005" target="_blank" rel="noopener noreferrer">2026 multi-society PE guideline</a> for three-level PE and Revised Geneva categories. Pretest-probability labels are not individualized event probabilities. A negative D-dimer is only interpretable within an appropriate validated algorithm, assay threshold, and clinical context.</p>
+      <p>For research, education and clinician-facing reference. Do not enter patient identifiers.</p>
+    </footer>
+  </div>
+</body>
+</html>
