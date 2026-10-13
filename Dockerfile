@@ -21,4 +21,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 # Default: run the CLI in interactive mode
 # For web API: `docker run ... python -m uvicorn agents.api:app --host 0.0.0.0 --port 8000`
-CMD ["python", "cli.py", "criteria"]
+CMD ["python", "-m", "uvicorn", "agents.api:app", "--host", "0.0.0.0", "--port", "8000"]
