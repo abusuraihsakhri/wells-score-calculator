@@ -40,15 +40,15 @@ class TestDVTLowProbability(unittest.TestCase):
         """No criteria present → score 0 → low probability."""
         result = calculate_dvt({})
         self.assertEqual(result["score"], 0)
-        self.assertEqual(result["two_tier"]["category"], "Low probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
         self.assertEqual(result["three_tier"]["category"], "Low probability")
-        self.assertEqual(result["two_tier"]["prevalence_pct"], 5)
+        self.assertEqual(result["two_tier"]["prevalence_pct"], None)
 
     def test_only_alternative_diagnosis(self):
         """Alternative diagnosis alone → score -2 → low probability."""
         result = calculate_dvt({"alternative_diagnosis": True})
         self.assertEqual(result["score"], -2)
-        self.assertEqual(result["two_tier"]["category"], "Low probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
         self.assertEqual(result["three_tier"]["category"], "Low probability")
 
     def test_one_positive_minus_alternative(self):
@@ -58,7 +58,7 @@ class TestDVTLowProbability(unittest.TestCase):
             "alternative_diagnosis": True,
         })
         self.assertEqual(result["score"], -1)
-        self.assertEqual(result["two_tier"]["category"], "Low probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
 
     def test_young_healthy_no_risk(self):
         """Young patient with no risk factors → score 0."""
@@ -120,9 +120,9 @@ class TestDVTHighProbability(unittest.TestCase):
             "recently_bedridden": True,
         })
         self.assertEqual(result["score"], 3)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
         self.assertEqual(result["three_tier"]["category"], "High probability")
-        self.assertEqual(result["two_tier"]["prevalence_pct"], 53)
+        self.assertEqual(result["two_tier"]["prevalence_pct"], None)
 
     def test_score_5(self):
         """Five criteria → score 5 → high."""
@@ -134,7 +134,7 @@ class TestDVTHighProbability(unittest.TestCase):
             "entire_leg_swollen": True,
         })
         self.assertEqual(result["score"], 5)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
     def test_all_positive_no_alternative(self):
         """All 9 positive criteria (no alternative) → score 9 → high."""
@@ -150,7 +150,7 @@ class TestDVTHighProbability(unittest.TestCase):
             "previous_dvt": True,
         })
         self.assertEqual(result["score"], 9)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
     def test_all_positive_with_alternative(self):
         """All 10 criteria → 9 + (-2) = 7 → high."""
@@ -167,7 +167,7 @@ class TestDVTHighProbability(unittest.TestCase):
             "alternative_diagnosis": True,
         })
         self.assertEqual(result["score"], 7)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
 
 class TestDVTIndividualCriteria(unittest.TestCase):
@@ -215,7 +215,7 @@ class TestDVTAlternativeDiagnosis(unittest.TestCase):
             "alternative_diagnosis": True,
         })
         self.assertEqual(result["score"], 3)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
     def test_alternative_drops_to_moderate(self):
         """3 positive + alternative → 3 - 2 = 1 → moderate."""
@@ -326,8 +326,8 @@ class TestPEThreeTier(unittest.TestCase):
     def test_moderate(self):
         result = calculate_pe({"hemoptysis": True})
         self.assertEqual(result["score"], 1)
-        self.assertEqual(result["three_tier"]["category"], "Moderate probability")
-        self.assertEqual(result["three_tier"]["prevalence_pct"], 20)
+        self.assertEqual(result["three_tier"]["category"], "Low probability")
+        self.assertEqual(result["three_tier"]["prevalence_pct"], 3)
 
     def test_high(self):
         result = calculate_pe({
@@ -438,25 +438,9 @@ class TestGenevaScore(unittest.TestCase):
                 f"got {result['score']}"
             )
 
-    def test_all_criteria(self):
-        """All Geneva criteria → 3+3+5+2+2+2+3+4+1 = 25."""
-        result = calculate_geneva({
-            "previous_dvt_pe": True,
-            "heart_rate_75_94": True,
-            "heart_rate_95_plus": True,
-            "surgery_fracture_1mo": True,
-            "hemoptysis": True,
-            "active_cancer": True,
-            "unilateral_leg_pain": True,
-            "pain_on_palpation": True,
-            "age_over_65": True,
-        })
-        self.assertEqual(result["score"], 25)
-        self.assertEqual(result["two_tier"]["category"], "PE likely")
-
-
-class TestDDimerGuidance(unittest.TestCase):
-    """D-dimer integration guidance is provided."""
+    def test_all_criteria_rejects_mutually_exclusive_heart_rates(self):
+        with self.assertRaises(ValueError):
+            calculate_geneva({k: True for k, _, _ in GENEVA_CRITERIA})
 
     def test_dvt_low_dimer_guidance(self):
         result = calculate_dvt({})
@@ -500,7 +484,7 @@ class TestClinicalScenarios(unittest.TestCase):
             "pitting_edema": True,
         })
         self.assertEqual(result["score"], 4)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
     def test_scenario_young_woman_leg_pain(self):
         """25yo woman with leg pain, no risk factors, alternative diagnosis
@@ -509,7 +493,7 @@ class TestClinicalScenarios(unittest.TestCase):
             "alternative_diagnosis": True,
         })
         self.assertEqual(result["score"], -2)
-        self.assertEqual(result["two_tier"]["category"], "Low probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
 
     def test_scenario_cancer_patient_dyspnea(self):
         """58yo with lung cancer, recent immobilization, tachycardia,
@@ -553,7 +537,7 @@ class TestClinicalScenarios(unittest.TestCase):
             "calf_swelling_3cm": True,
         })
         self.assertEqual(result["score"], 3)
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT likely")
 
     def test_scenario_geneva_postop_elderly(self):
         """70yo post-surgery with tachycardia and leg pain.
@@ -576,15 +560,15 @@ class TestEdgeCases(unittest.TestCase):
         """Score exactly 0 → low (two-tier) and low (three-tier)."""
         result = calculate_dvt({})
         self.assertEqual(result["score"], 0)
-        self.assertEqual(result["two_tier"]["category"], "Low probability")
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
         self.assertEqual(result["three_tier"]["category"], "Low probability")
 
     def test_dvt_boundary_score_1(self):
-        """Score exactly 1 → high (two-tier, since 1 > 0) and moderate (three-tier)."""
+        """Score exactly 1 → DVT unlikely in the two-level rule."""
         result = calculate_dvt({"active_cancer": True})
         self.assertEqual(result["score"], 1)
-        # Two-tier: <=0 is low, >0 is high
-        self.assertEqual(result["two_tier"]["category"], "High probability")
+        # Two-tier: <=1 is DVT unlikely.
+        self.assertEqual(result["two_tier"]["category"], "DVT unlikely")
         # Three-tier: 1-2 is moderate
         self.assertEqual(result["three_tier"]["category"], "Moderate probability")
 
