@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from .base import AuditLogger, PHIGuard
 from .models import SystemTaskPayload, ConsensusDossier
 from .supervisor import SystemSupervisor
+from wells import calculate_dvt, calculate_pe, calculate_geneva, list_dvt_criteria, list_pe_criteria, list_geneva_criteria
 
 supervisor = SystemSupervisor(model_provider="mock")
 
@@ -53,3 +54,23 @@ def api_chat(req: ChatRequest):
 @app.get("/api/audit/logs")
 def api_audit_logs():
     return {"audit_trail": AuditLogger.get_trail(), "verified": AuditLogger.verify_integrity()}
+
+# Scoring endpoints are stateless; no identifiers or clinical inputs are persisted.
+@app.get("/api/score/criteria")
+def score_criteria():
+    return {
+        "dvt": list_dvt_criteria(),
+        "pe": list_pe_criteria(),
+        "geneva": list_geneva_criteria(),
+    }
+
+
+@app.post("/api/score/{score_type}")
+def score_patient(score_type: str, criteria: Dict[str, Any]):
+    calculators = {"dvt": calculate_dvt, "pe": calculate_pe, "geneva": calculate_geneva}
+    if score_type not in calculators:
+        raise HTTPException(status_code=404, detail="Unknown score type")
+    try:
+        return calculators[score_type](criteria)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

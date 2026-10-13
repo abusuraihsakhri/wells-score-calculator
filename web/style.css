@@ -1,0 +1,47 @@
+:root { color-scheme: dark; --bg: #0a101b; --surface: #121e30; --border: #314059; --text: #eef5ff; --muted: #b8c5d8; --accent: #8ecbff; --accent-bg: #193b61; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+button, input { font: inherit; }
+a { color: var(--accent); text-underline-offset: .2em; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid #a8dbff; outline-offset: 3px; }
+.shell { max-width: 1180px; padding: 36px 22px 60px; margin: auto; }
+.page-head { margin-bottom: 24px; }
+.eyebrow { margin: 0 0 10px; color: var(--accent); font-size: .75rem; font-weight: 800; letter-spacing: .13em; }
+h1 { font-size: clamp(2rem, 4.5vw, 3rem); letter-spacing: -.035em; line-height: 1.15; margin: 0 0 12px; }
+h2 { font-size: 1.18rem; margin: 0; }
+h3 { font-size: 1rem; margin: 0 0 7px; }
+.subhead { max-width: 780px; color: var(--muted); margin: 0; }
+.safety { padding: 13px 17px; border: 1px solid #6a5430; border-left: 4px solid #e4ae60; border-radius: 8px; background: #2a241c; margin: 20px 0 25px; font-size: .92rem; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(295px, 1fr); align-items: start; gap: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+.panel-title { display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+.quiet { border: 1px solid var(--border); background: transparent; color: var(--accent); border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: .85rem; }
+.quiet:hover { background: #1d334f; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 20px 0 14px; }
+.tab { cursor: pointer; background: #0d1725; border: 1px solid var(--border); border-radius: 8px; padding: 11px 6px; color: var(--muted); font-weight: 650; font-size: .84rem; }
+.tab:hover { border-color: var(--accent); }
+.tab.active { background: var(--accent-bg); color: #d9edff; border-color: var(--accent); }
+.prompt { color: var(--muted); font-size: .88rem; margin: 0 0 14px; }
+.criteria { padding: 0; margin: 0; border: 0; }
+.criteria legend { font-weight: 650; padding-bottom: 8px; }
+.criterion { display: flex; align-items: flex-start; gap: 13px; padding: 12px 9px; border-bottom: 1px solid #29374c; cursor: pointer; border-radius: 5px; }
+.criterion:last-child { border-bottom: 0; }
+.criterion:hover { background: #1b2d43; }
+.criterion input { margin: 4px 0 0; flex: 0 0 auto; width: 18px; height: 18px; accent-color: #70baff; cursor: pointer; }
+.criterion .desc { flex: 1; }
+.points { flex: 0 0 auto; min-width: 42px; text-align: right; color: #b7dafa; font-weight: 700; font-variant-numeric: tabular-nums; }
+.points.negative { color: #f0b2a0; }
+.result-panel { position: sticky; top: 16px; }
+.meta { font-size: .77rem; font-weight: 650; text-transform: uppercase; letter-spacing: .055em; color: var(--muted); margin: 18px 0 0; }
+.score { display: block; font-size: 5rem; font-weight: 750; line-height: 1.15; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.assessment { border-top: 1px solid var(--border); margin-top: 17px; }
+.assessment .meta { margin-top: 16px; }
+.classification { font-size: 1.18rem; font-weight: 700; margin: 5px 0 0; color: #b8e2ff; }
+.classification.secondary { color: var(--text); }
+.guidance { padding: 16px; border-radius: 9px; background: #0d1929; margin-top: 22px; }
+.guidance p { margin: 0; font-size: .92rem; color: var(--muted); }
+.privacy { font-size: .8rem; color: var(--muted); margin: 19px 0 0; }
+footer { padding: 30px 3px 0; max-width: 900px; color: var(--muted); font-size: .84rem; }
+footer h2 { color: var(--text); font-size: 1rem; }
+footer p { margin: 11px 0 0; }
+@media (max-width: 780px) { .shell { padding: 24px 14px 50px; } .layout { grid-template-columns: 1fr; } .result-panel { position: static; } .panel { padding: 18px; } .tabs { grid-template-columns: 1fr; } .tab { text-align: left; padding: 10px 13px; } }
