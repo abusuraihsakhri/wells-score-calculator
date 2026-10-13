@@ -82,7 +82,8 @@ def _print_result(result, score_type):
         t = result["two_tier"]
         print(f"\n  Two-tier interpretation:")
         print(f"    Category:   {t['category']}")
-        print(f"    Prevalence: ~{t['prevalence_pct']}%")
+        if t["prevalence_pct"] is not None:
+            print(f"    Historical cohort prevalence: ~{t['prevalence_pct']}%")
         print(f"    Action:     {t['recommendation']}")
 
     if "three_tier" in result:
@@ -113,7 +114,11 @@ def cmd_dvt(args):
     else:
         criteria = _prompt_criteria(DVT_CRITERIA, "DVT (Deep Vein Thrombosis)")
 
-    result = calculate_dvt(criteria)
+    try:
+        result = calculate_dvt(criteria)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
     _print_result(result, "WELLS DVT")
     return 0
 
@@ -129,7 +134,11 @@ def cmd_pe(args):
     else:
         criteria = _prompt_criteria(PE_CRITERIA, "PE (Pulmonary Embolism)")
 
-    result = calculate_pe(criteria)
+    try:
+        result = calculate_pe(criteria)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
     _print_result(result, "WELLS PE")
     return 0
 
@@ -145,7 +154,11 @@ def cmd_geneva(args):
     else:
         criteria = _prompt_criteria(GENEVA_CRITERIA, "Revised Geneva (PE)")
 
-    result = calculate_geneva(criteria)
+    try:
+        result = calculate_geneva(criteria)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
     _print_result(result, "REVISED GENEVA PE")
     return 0
 
@@ -166,7 +179,7 @@ def cmd_criteria(args):
     for c in list_pe_criteria():
         print(f"    +{c['points']:g}  {c['key']:25s}  {c['description']}")
 
-    print("\n  --- Revised Geneva Criteria (range: 0 to 21) ---")
+    print("\n  --- Revised Geneva Criteria (maximum valid score: 22) ---")
     for c in list_geneva_criteria():
         print(f"    +{c['points']:g}  {c['key']:25s}  {c['description']}")
 
